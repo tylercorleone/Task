@@ -67,5 +67,7 @@ private:
     Task* _pLastTask;
 
     uint32_t ProcessTasks(uint32_t deltaTime);
-    void RemoveStoppedTasks();
+    uint32_t UpdateTasksList(uint32_t deltaTime);
+    void RemoveTask(Task* pTaskToRemove, Task* pPrevious, Task* pNext);
+    uint32_t UpdateTaskRemainingTime(Task* pTask, uint32_t deltaTime);
 };

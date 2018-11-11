@@ -68,6 +68,7 @@ public:
         if (_taskState == TaskState_Running)
         {
             _remainingTime = timeInterval;
+            _dirtyRemainingTimeFlag = false;
         }
     }
 
@@ -88,15 +89,20 @@ protected:
 
     uint32_t _remainingTime;
     uint32_t _timeInterval;
+    bool _dirtyRemainingTimeFlag = false;
 
 private:
     friend class TaskManager;
     Task* _pNext; // next task in list
     TaskState _taskState;
+    bool _updateTimeReachedFlag = false;
 
     void Start()
     {
         _remainingTime = _timeInterval;
+        _dirtyRemainingTimeFlag = false;
+        _updateTimeReachedFlag = false;
+
         if (OnStart())
         {
             _taskState = TaskState_Running;
