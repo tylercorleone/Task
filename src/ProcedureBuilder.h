@@ -20,11 +20,11 @@
  * uint32_t makeSomethingReturnInterval();
  * uint32_t makeSomethingReturnIntervalUsingState(SomeType state);
  *
- * Procedure &procedure = ProcedureBuilder::begin(makeSomething, MsToTaskTime(1000)) 	// (1)
- *		.then(makeSomethingUsingState, MsToTaskTime(2000), stateHolder)					// (2)
- *		.then(makeSomethingReturnInterval)												// (3)
- *		.then(makeSomethingReturnIntervalUsingState, stateHolder)						// (4)
- *		.thenRepeat();																	// (5)
+ * Procedure &procedure = ProcedureBuilder::begin(makeSomething, MsToTaskTime(1000))     // (1)
+ *        .then(makeSomethingUsingState, MsToTaskTime(2000), stateHolder)                // (2)
+ *        .then(makeSomethingReturnInterval)                                             // (3)
+ *        .then(makeSomethingReturnIntervalUsingState, stateHolder)                      // (4)
+ *        .thenRepeat();                                                                 // (5)
  *
  * taskManager.StartTask(&procedure);
  *
@@ -37,125 +37,137 @@
  * (5) then repeat the sequence. Use done() to execute the sequence just one time
  *
  */
-class ProcedureBuilder {
+class ProcedureBuilder
+{
 public:
-	static ProcedureBuilder begin(void (*callback)(), uint32_t nextInterval);
-	static ProcedureBuilder begin(uint32_t (*callbackReturningInterval)());
-	template<typename T> static ProcedureBuilder begin(
-			void (*callbackWithState)(T*), uint32_t nextInterval, T *state);
-	template<typename T>
-	static ProcedureBuilder begin(
-			uint32_t (*callbackReturningIntervalWithState)(T*), T *state);
-	ProcedureBuilder& then(void (*callback)(), uint32_t nextInterval);
-	ProcedureBuilder& then(uint32_t (*callbackReturningInterval)());
-	template<typename T>
-	ProcedureBuilder& then(void (*callbackWithState)(T*), uint32_t nextInterval,
-			T *state);
-	template<typename T>
-	ProcedureBuilder& then(uint32_t (*callbackReturningIntervalWithState)(T*),
-			T *state);
-	Procedure& done();
-	Procedure& thenRepeat();
+    static ProcedureBuilder begin(void (*callback)(), uint32_t nextInterval);
+    static ProcedureBuilder begin(uint32_t (*callbackReturningInterval)());
+    template<typename T> static ProcedureBuilder begin(
+            void (*callbackWithState)(T*), uint32_t nextInterval, T *state);
+    template<typename T>
+    static ProcedureBuilder begin(
+            uint32_t (*callbackReturningIntervalWithState)(T*), T *state);
+    ProcedureBuilder& then(void (*callback)(), uint32_t nextInterval);
+    ProcedureBuilder& then(uint32_t (*callbackReturningInterval)());
+    template<typename T>
+    ProcedureBuilder& then(void (*callbackWithState)(T*), uint32_t nextInterval,
+            T *state);
+    template<typename T>
+    ProcedureBuilder& then(uint32_t (*callbackReturningIntervalWithState)(T*),
+            T *state);
+    Procedure& done();
+    Procedure& thenRepeat();
 private:
-	ProcedureBuilder(Procedure &instance);
-	Procedure &instance;
+    ProcedureBuilder(Procedure &instance);
+    Procedure &instance;
 };
 
 inline ProcedureBuilder::ProcedureBuilder(Procedure &instance) :
-		instance(instance) {
+        instance(instance)
+{
 
 }
 
 inline ProcedureBuilder ProcedureBuilder::begin(void (*callback)(),
-		uint32_t nextInterval) {
+        uint32_t nextInterval)
+{
 
-	ProcedureNode *pTaskNode = new Callback(callback, nextInterval);
-	Procedure *pInstance = new Procedure(pTaskNode);
-	ProcedureBuilder builder { *pInstance };
-	return builder;
+    ProcedureNode *pTaskNode = new Callback(callback, nextInterval);
+    Procedure *pInstance = new Procedure(pTaskNode);
+    ProcedureBuilder builder { *pInstance };
+    return builder;
 }
 
 inline ProcedureBuilder ProcedureBuilder::begin(
-		uint32_t (*callbackReturningInterval)()) {
+        uint32_t (*callbackReturningInterval)())
+{
 
-	ProcedureNode *pTaskNode = new CallbackReturningInterval(
-			callbackReturningInterval);
-	Procedure *pInstance = new Procedure(pTaskNode);
-	ProcedureBuilder builder { *pInstance };
-	return builder;
+    ProcedureNode *pTaskNode = new CallbackReturningInterval(
+            callbackReturningInterval);
+    Procedure *pInstance = new Procedure(pTaskNode);
+    ProcedureBuilder builder { *pInstance };
+    return builder;
 }
 
 template<typename T>
 inline ProcedureBuilder ProcedureBuilder::begin(void (*callbackWithState)(T*),
-		uint32_t nextInterval, T *state) {
+        uint32_t nextInterval, T *state)
+{
 
-	ProcedureNode *pTaskNode = new CallbackWithState(
-			(void (*)(void*)) callbackWithState, nextInterval, (void*) state);
-	Procedure *pInstance = new Procedure(pTaskNode);
-	ProcedureBuilder builder {*pInstance};
-	return builder;
+    ProcedureNode *pTaskNode = new CallbackWithState(
+            (void (*)(void*)) callbackWithState, nextInterval, (void*) state);
+    Procedure *pInstance = new Procedure(pTaskNode);
+    ProcedureBuilder builder {*pInstance};
+    return builder;
 }
 
 template<typename T>
 inline ProcedureBuilder ProcedureBuilder::begin(
-		uint32_t (*callbackReturningIntervalWithState)(T*), T *state) {
+        uint32_t (*callbackReturningIntervalWithState)(T*), T *state)
+{
 
-	ProcedureNode *pTaskNode = new CallbackWithStateReturningInterval(
-			(uint32_t (*)(void*)) callbackReturningIntervalWithState, (void*) state);
-	Procedure *pInstance = new Procedure(pTaskNode);
-	ProcedureBuilder builder {*pInstance};
-	return builder;
+    ProcedureNode *pTaskNode = new CallbackWithStateReturningInterval(
+            (uint32_t (*)(void*)) callbackReturningIntervalWithState, (void*) state);
+    Procedure *pInstance = new Procedure(pTaskNode);
+    ProcedureBuilder builder {*pInstance};
+    return builder;
 }
 
 inline ProcedureBuilder& ProcedureBuilder::then(void (*callback)(),
-		uint32_t nextInterval) {
+        uint32_t nextInterval)
+{
 
-	instance.pLastNode->pNext = new Callback(callback, nextInterval);
-	instance.pLastNode = instance.pLastNode->pNext;
+    instance.pLastNode->pNext = new Callback(callback, nextInterval);
+    instance.pLastNode = instance.pLastNode->pNext;
 
-	return *this;
+    return *this;
 }
 
 inline ProcedureBuilder& ProcedureBuilder::then(
-		uint32_t (*callbackReturningInterval)()) {
+        uint32_t (*callbackReturningInterval)())
+{
 
-	instance.pLastNode->pNext = new CallbackReturningInterval(
-			callbackReturningInterval);
-	instance.pLastNode = instance.pLastNode->pNext;
+    instance.pLastNode->pNext = new CallbackReturningInterval(
+            callbackReturningInterval);
+    instance.pLastNode = instance.pLastNode->pNext;
 
-	return *this;
+    return *this;
 }
 
 template<typename T>
 inline ProcedureBuilder& ProcedureBuilder::then(void (*callbackWithState)(T*),
-		uint32_t nextInterval, T *state) {
+        uint32_t nextInterval, T *state)
+{
 
-	instance.pLastNode->pNext = new CallbackWithState(
-			(void (*)(void*)) callbackWithState, nextInterval, state);
-	instance.pLastNode = instance.pLastNode->pNext;
+    instance.pLastNode->pNext = new CallbackWithState(
+            (void (*)(void*)) callbackWithState, nextInterval, state);
+    instance.pLastNode = instance.pLastNode->pNext;
 
-	return *this;
+    return *this;
 }
 
 template<typename T>
 inline ProcedureBuilder& ProcedureBuilder::then(
-		uint32_t (*callbackReturningIntervalWithState)(T*), T *state) {
+        uint32_t (*callbackReturningIntervalWithState)(T*), T *state)
+{
 
-	instance.pLastNode->pNext = new CallbackWithStateReturningInterval(
-			(uint32_t (*)(void*)) callbackReturningIntervalWithState, state);
-	instance.pLastNode = instance.pLastNode->pNext;
+    instance.pLastNode->pNext = new CallbackWithStateReturningInterval(
+            (uint32_t (*)(void*)) callbackReturningIntervalWithState, state);
+    instance.pLastNode = instance.pLastNode->pNext;
 
-	return *this;
+    return *this;
 }
 
-inline Procedure& ProcedureBuilder::done() {
-	instance.repeat = false;
-	return instance;
+inline Procedure& ProcedureBuilder::done()
+{
+    instance.repeat = false;
+    return instance;
 }
 
-inline Procedure& ProcedureBuilder::thenRepeat() {
-	instance.repeat = true;
-	return instance;
+inline Procedure& ProcedureBuilder::thenRepeat()
+{
+    instance.repeat = true;
+    return instance;
 }
 
 #endif

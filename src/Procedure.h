@@ -11,82 +11,87 @@
  * For usage see ProcedureBuilder.h
  */
 
-class ProcedureNode {
-	friend class Procedure;
-	friend class ProcedureBuilder;
+class ProcedureNode
+{
+    friend class Procedure;
+    friend class ProcedureBuilder;
 private:
-	virtual void execute() = 0;
-	virtual uint32_t getNextInterval() = 0;
-	ProcedureNode *pNext = nullptr;
+    virtual void execute() = 0;
+    virtual uint32_t getNextInterval() = 0;
+    ProcedureNode *pNext = nullptr;
 public:
-	virtual ~ProcedureNode() {
-	}
+    virtual ~ProcedureNode(){}
 };
 
-class Callback: public ProcedureNode {
-	friend class Procedure;
-	friend class ProcedureBuilder;
+class Callback: public ProcedureNode
+{
+    friend class Procedure;
+    friend class ProcedureBuilder;
 private:
-	Callback(void (*function)(), uint32_t nextInterval);
-	void execute() override;
-	uint32_t getNextInterval() override;
-	void (*function)();
-	uint32_t nextInterval;
+    Callback(void (*function)(), uint32_t nextInterval);
+    void execute() override;
+    uint32_t getNextInterval() override;
+    void (*function)();
+    uint32_t nextInterval;
 };
 
-class CallbackReturningInterval: public ProcedureNode {
-	friend class Procedure;
-	friend class ProcedureBuilder;
+class CallbackReturningInterval: public ProcedureNode
+{
+    friend class Procedure;
+    friend class ProcedureBuilder;
 private:
-	CallbackReturningInterval(uint32_t (*callback)());
-	void execute() override;
-	uint32_t getNextInterval() override;
-	uint32_t (*functionReturningInterval)();
-	uint32_t nextInterval = -1;
+    CallbackReturningInterval(uint32_t (*callback)());
+    void execute() override;
+    uint32_t getNextInterval() override;
+    uint32_t (*functionReturningInterval)();
+    uint32_t nextInterval = -1;
 };
 
-class CallbackWithState: public ProcedureNode {
-	friend class Procedure;
-	friend class ProcedureBuilder;
+class CallbackWithState: public ProcedureNode
+{
+    friend class Procedure;
+    friend class ProcedureBuilder;
 private:
-	CallbackWithState(void (*callback)(void*), uint32_t nextInterval,
-			void *state);
-	void execute() override;
-	uint32_t getNextInterval() override;
-	void (*functionTakingState)(void*);
-	uint32_t nextInterval;
-	void *state;
+    CallbackWithState(void (*callback)(void*), uint32_t nextInterval,
+            void *state);
+    void execute() override;
+    uint32_t getNextInterval() override;
+    void (*functionTakingState)(void*);
+    uint32_t nextInterval;
+    void *state;
 };
 
-class CallbackWithStateReturningInterval: public ProcedureNode {
-	friend class Procedure;
-	friend class ProcedureBuilder;
+class CallbackWithStateReturningInterval: public ProcedureNode
+{
+    friend class Procedure;
+    friend class ProcedureBuilder;
 private:
-	CallbackWithStateReturningInterval(uint32_t (*callback)(void*),
-			void *state);
-	void execute() override;
-	uint32_t getNextInterval() override;
-	uint32_t (*functionTakingStateReturningInterval)(void*);
-	uint32_t nextInterval = -1;
-	void *state;
+    CallbackWithStateReturningInterval(uint32_t (*callback)(void*),
+            void *state);
+    void execute() override;
+    uint32_t getNextInterval() override;
+    uint32_t (*functionTakingStateReturningInterval)(void*);
+    uint32_t nextInterval = -1;
+    void *state;
 };
 
-class Procedure: public Task {
-	friend class ProcedureBuilder;
+class Procedure: public Task
+{
+    friend class ProcedureBuilder;
 private:
-	Procedure(ProcedureNode *pTaskNode);
-	Procedure(const Procedure&) = delete;
-	Procedure& operator=(const Procedure&) = delete;
-	bool OnStart() override;
-	void OnUpdate(uint32_t taskDeltaTime) override;
+    Procedure(ProcedureNode *pTaskNode);
+    Procedure(const Procedure&) = delete;
+    Procedure& operator=(const Procedure&) = delete;
+    bool OnStart() override;
+    void OnUpdate(uint32_t taskDeltaTime) override;
 
-	ProcedureNode *pFirstNode;
-	ProcedureNode *pLastNode;
-	ProcedureNode *pNodeToRun = nullptr;
-	bool repeat = false;
-	bool sequenceCompleted = false;
+    ProcedureNode *pFirstNode;
+    ProcedureNode *pLastNode;
+    ProcedureNode *pNodeToRun = nullptr;
+    bool repeat = false;
+    bool sequenceCompleted = false;
 public:
-	virtual ~Procedure();
+    virtual ~Procedure();
 };
 
 #include "ProcedureBuilder.h"
@@ -95,104 +100,130 @@ public:
  * Implementation
  */
 
-inline Procedure::~Procedure() {
-	ProcedureNode *pIterate;
-	pIterate = pFirstNode;
-	while (pIterate != nullptr) {
-		ProcedureNode *pNext = pIterate->pNext;
-		delete pIterate;
-		pIterate = pNext;
-	}
+inline Procedure::~Procedure()
+{
+    ProcedureNode *pIterate;
+    pIterate = pFirstNode;
+    while (pIterate != nullptr) {
+        ProcedureNode *pNext = pIterate->pNext;
+        delete pIterate;
+        pIterate = pNext;
+    }
 }
 
 inline Procedure::Procedure(ProcedureNode *pTaskNode) :
-		Task(-1) {
-	pFirstNode = pLastNode = pTaskNode;
+        Task(-1)
+{
+    pFirstNode = pLastNode = pTaskNode;
 }
 
 inline bool Procedure::OnStart() {
-	sequenceCompleted = false;
-	pNodeToRun = pFirstNode;
-	_remainingTime = 0;
-	return true;
+    sequenceCompleted = false;
+    pNodeToRun = pFirstNode;
+    _remainingTime = 0;
+    return true;
 }
 
-inline void Procedure::OnUpdate(uint32_t taskDeltaTime) {
-	if (sequenceCompleted && !repeat) {
-		setTimeInterval(-1);
-		return;
-	}
+inline void Procedure::OnUpdate(uint32_t taskDeltaTime)
+{
+    if (sequenceCompleted && !repeat)
+    {
+        setTimeInterval(-1);
+        return;
+    }
 
-	pNodeToRun->execute();
-	setTimeInterval(pNodeToRun->getNextInterval());
+    pNodeToRun->execute();
+    setTimeInterval(pNodeToRun->getNextInterval());
 
-	if (pNodeToRun->pNext != nullptr) {
-		pNodeToRun = pNodeToRun->pNext;
-	} else {
+    if (pNodeToRun->pNext != nullptr)
+    {
+        pNodeToRun = pNodeToRun->pNext;
+    }
+    else
+    {
 
-		/*
-		 * this is the last node
-		 */
-		if (repeat) {
-			pNodeToRun = pFirstNode;
-		} else {
-			sequenceCompleted = true;
-			setTimeInterval(-1);
-		}
-	}
+        /*
+         * this is the last node
+         */
+        if (repeat)
+        {
+            pNodeToRun = pFirstNode;
+        }
+        else
+        {
+            sequenceCompleted = true;
+            setTimeInterval(-1);
+        }
+    }
 }
 
 inline Callback::Callback(void (*function)(), uint32_t nextInterval) :
-		function(function), nextInterval(nextInterval) {
+        function(function), nextInterval(nextInterval)
+{
+
 }
 
-inline void Callback::execute() {
-	function();
+inline void Callback::execute()
+{
+    function();
 }
 
-inline uint32_t Callback::getNextInterval() {
-	return nextInterval;
+inline uint32_t Callback::getNextInterval()
+{
+    return nextInterval;
 }
 
 inline CallbackReturningInterval::CallbackReturningInterval(
-		uint32_t (*functionReturningInterval)()) :
-		functionReturningInterval(functionReturningInterval) {
+        uint32_t (*functionReturningInterval)()) :
+        functionReturningInterval(functionReturningInterval)
+{
+
 }
 
-inline void CallbackReturningInterval::execute() {
-	nextInterval = functionReturningInterval();
+inline void CallbackReturningInterval::execute()
+{
+    nextInterval = functionReturningInterval();
 }
 
-inline uint32_t CallbackReturningInterval::getNextInterval() {
-	return nextInterval;
+inline uint32_t CallbackReturningInterval::getNextInterval()
+{
+    return nextInterval;
 }
 
 inline CallbackWithState::CallbackWithState(void (*functionTakingState)(void*),
-		uint32_t nextInterval, void *state) :
-		functionTakingState(functionTakingState), nextInterval(nextInterval), state(
-				state) {
+        uint32_t nextInterval, void *state) :
+        functionTakingState(functionTakingState), nextInterval(nextInterval), state(
+                state)
+{
+
 }
 
-inline void CallbackWithState::execute() {
-	functionTakingState(state);
+inline void CallbackWithState::execute()
+{
+    functionTakingState(state);
 }
 
-inline uint32_t CallbackWithState::getNextInterval() {
-	return nextInterval;
+inline uint32_t CallbackWithState::getNextInterval()
+{
+    return nextInterval;
 }
 
 inline CallbackWithStateReturningInterval::CallbackWithStateReturningInterval(
-		uint32_t (*functionTakingStateReturningInterval)(void*), void *state) :
-		functionTakingStateReturningInterval(
-				functionTakingStateReturningInterval), state(state) {
+        uint32_t (*functionTakingStateReturningInterval)(void*), void *state) :
+        functionTakingStateReturningInterval(
+                functionTakingStateReturningInterval), state(state)
+{
+
 }
 
-inline void CallbackWithStateReturningInterval::execute() {
-	nextInterval = functionTakingStateReturningInterval(state);
+inline void CallbackWithStateReturningInterval::execute()
+{
+    nextInterval = functionTakingStateReturningInterval(state);
 }
 
-inline uint32_t CallbackWithStateReturningInterval::getNextInterval() {
-	return nextInterval;
+inline uint32_t CallbackWithStateReturningInterval::getNextInterval()
+{
+    return nextInterval;
 }
 
 #endif
