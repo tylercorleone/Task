@@ -48,7 +48,9 @@ enum TaskState
 {
     TaskState_Stopped,
     TaskState_Running,
-    TaskState_Stopping
+    TaskState_Stopping,
+    TaskState_Suspended,
+    TaskState_Ready
 };
 
 class Task
@@ -57,9 +59,12 @@ public:
     Task(uint32_t timeInterval) :
             _remainingTime(0),
             _timeInterval(timeInterval),
+            _dirtyRemainingTimeFlag(false),
             _pNext(NULL),
-            _taskState(TaskState_Stopped)
+            _taskState(TaskState_Stopped),
+            _updateTimeReachedFlag(false)
     {
+
     }
 
     void setTimeInterval(uint32_t timeInterval)
@@ -85,17 +90,44 @@ public:
 protected:
     virtual bool OnStart() { return true; };
     virtual void OnStop() {};
+    virtual void OnSuspend() {};
+    virtual bool OnResume() { return true; };
     virtual void OnUpdate(uint32_t deltaTime) {};
 
     uint32_t _remainingTime;
     uint32_t _timeInterval;
-    bool _dirtyRemainingTimeFlag = false;
+    bool _dirtyRemainingTimeFlag;
+
+    void Suspend()
+    {
+        if (_taskState == TaskState_Running
+                || _taskState == TaskState_Stopping)
+        {
+            OnSuspend();
+            _taskState = TaskState_Suspended;
+        }
+    }
+
+    void Resume()
+    {
+        if (_taskState == TaskState_Suspended)
+        {
+            if (OnResume())
+            {
+                _taskState = TaskState_Ready;
+            }
+            else
+            {
+                _taskState = TaskState_Stopping;
+            }
+        }
+    }
 
 private:
     friend class TaskManager;
     Task* _pNext; // next task in list
     TaskState _taskState;
-    bool _updateTimeReachedFlag = false;
+    bool _updateTimeReachedFlag;
 
     void Start()
     {

@@ -32,7 +32,9 @@ extern "C"
 
 TaskManager::TaskManager() :
         _pFirstTask( NULL ),
-        _pLastTask( NULL )
+        _pLastTask( NULL ),
+        _taskListScanned(false),
+        _runningTasksCount(0)
 {
 
 #if defined(ARDUINO_ARCH_AVR) && !defined(__arm__)
@@ -79,6 +81,44 @@ void TaskManager::StartTask(Task* pTask)
 void TaskManager::StopTask(Task* pTask)
 {
     pTask->Stop();
+}
+
+void TaskManager::SuspendTask(Task* pTask)
+{
+    pTask->Suspend();
+}
+
+void TaskManager::ResumeTask(Task* pTask)
+{
+    pTask->Resume();
+}
+
+void TaskManager::RegisterTask(Task* pTask)
+{
+    if (pTask->_taskState == TaskState_Running
+            || pTask->_taskState == TaskState_Ready
+            || pTask->_taskState == TaskState_Suspended)
+    {
+        // already registered
+        return;
+    }
+
+    // check if it has been stopped yet as it may be just stopping
+    if (pTask->_taskState == TaskState_Stopped)
+    {
+        // append to the list
+        if (_pFirstTask == NULL)
+        {
+            _pFirstTask = pTask;
+            _pLastTask = pTask;
+        }
+        else
+        {
+            _pLastTask->_pNext = pTask;
+            _pLastTask = pTask;
+        }
+    }
+    pTask->_taskState = TaskState_Suspended;
 }
 
 TaskState TaskManager::StatusTask(Task* pTask)
@@ -149,6 +189,11 @@ void TaskManager::Loop(uint16_t watchdogTimeOutFlag)
         }
 #endif
 
+        _taskListScanned = true;
+    }
+    else
+    {
+        _taskListScanned = false;
     }
 }
 
@@ -225,6 +270,11 @@ uint32_t TaskManager::ProcessTasks(uint32_t deltaTime)
     Task* pIterate = _pFirstTask;
     while (pIterate != NULL)
     {
+        if (pIterate->_taskState == TaskState_Ready)
+        {
+            pIterate->_taskState = TaskState_Running;
+        }
+
         // skip any non running tasks
         if (pIterate->_taskState == TaskState_Running)
         {
@@ -248,6 +298,7 @@ uint32_t TaskManager::ProcessTasks(uint32_t deltaTime)
 uint32_t TaskManager::UpdateTasksList(uint32_t deltaTime)
 {
     uint32_t nextWakeTime = ((uint32_t)-1); // MAX_UINT32
+    _runningTasksCount = 0;
 
     Task* pIterate = _pFirstTask;
     Task* pIteratePrev = NULL;
@@ -263,19 +314,28 @@ uint32_t TaskManager::UpdateTasksList(uint32_t deltaTime)
             // didn't remove, advance the previous pointer
             pIteratePrev = pIterate;
 
-            // Task is running
-            if (pIterate->_dirtyRemainingTimeFlag) {
-            	UpdateTaskRemainingTime(pIterate, deltaTime);
-            } else {
-            	// let's all Running tasks have a "dirtyRemainingTime" before the next iteration
-            	pIterate->_dirtyRemainingTimeFlag = true;
-            }
-
-            pIterate->_updateTimeReachedFlag = false;
-
-            if (pIterate->_remainingTime < nextWakeTime)
+            if (pIterate->_taskState == TaskState_Running)
             {
-                nextWakeTime = pIterate->_remainingTime;
+                ++_runningTasksCount;
+
+                if (pIterate->_dirtyRemainingTimeFlag) {
+                    UpdateTaskRemainingTime(pIterate, deltaTime);
+                } else {
+                    // let's all Running tasks have a "dirtyRemainingTime" before the next iteration
+                    pIterate->_dirtyRemainingTimeFlag = true;
+                }
+
+                pIterate->_updateTimeReachedFlag = false;
+
+                if (pIterate->_remainingTime < nextWakeTime)
+                {
+                    nextWakeTime = pIterate->_remainingTime;
+                }
+            }
+            else if (pIterate->_taskState == TaskState_Ready)
+            {
+                pIterate->_taskState = TaskState_Running;
+                ++_runningTasksCount;
             }
         }
 
