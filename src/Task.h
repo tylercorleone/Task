@@ -59,10 +59,10 @@ public:
     Task(uint32_t timeInterval) :
             _remainingTime(0),
             _timeInterval(timeInterval),
-            _dirtyRemainingTimeFlag(false),
+            _dirtyRemainingTime(false),
             _pNext(NULL),
             _taskState(TaskState_Stopped),
-            _updateTimeReachedFlag(false)
+            _updateTimeReached(false)
     {
 
     }
@@ -70,10 +70,12 @@ public:
     void setTimeInterval(uint32_t timeInterval)
     {
         _timeInterval = timeInterval;
-        if (_taskState == TaskState_Running)
+        if (_taskState == TaskState_Running
+                || _taskState == TaskState_Ready
+                || _taskState == TaskState_Suspended)
         {
             _remainingTime = timeInterval;
-            _dirtyRemainingTimeFlag = false;
+            _dirtyRemainingTime = false;
         }
     }
 
@@ -90,24 +92,32 @@ public:
 protected:
     virtual bool OnStart() { return true; };
     virtual void OnStop() {};
-    virtual void OnSuspend() {};
+    virtual bool OnSuspend() { return true; };
     virtual bool OnResume() { return true; };
     virtual void OnUpdate(uint32_t deltaTime) {};
 
     uint32_t _remainingTime;
     uint32_t _timeInterval;
-    bool _dirtyRemainingTimeFlag;
 
     void Suspend()
     {
-        if (_taskState == TaskState_Running
-                || _taskState == TaskState_Stopping)
+        if (_taskState == TaskState_Suspended
+                || _taskState == TaskState_Stopped)
         {
-            OnSuspend();
+            // a stopped task cannot suspend itself
+            // use TaskManager::SuspendTask instead
+            return;
+        }
+
+        if (OnSuspend())
+        {
             _taskState = TaskState_Suspended;
         }
+        else
+        {
+            _taskState = TaskState_Stopping;
+        }
     }
-
     void Resume()
     {
         if (_taskState == TaskState_Suspended)
@@ -122,18 +132,23 @@ protected:
             }
         }
     }
-
+    void setRemainingTime(uint32_t remainingTime)
+    {
+        _remainingTime = remainingTime;
+        _dirtyRemainingTime = false;
+    }
 private:
     friend class TaskManager;
     Task* _pNext; // next task in list
     TaskState _taskState;
-    bool _updateTimeReachedFlag;
+    bool _updateTimeReached;
+    bool _dirtyRemainingTime;
 
     void Start()
     {
         _remainingTime = _timeInterval;
-        _dirtyRemainingTimeFlag = false;
-        _updateTimeReachedFlag = false;
+        _dirtyRemainingTime = false;
+        _updateTimeReached = false;
 
         if (OnStart())
         {
@@ -146,7 +161,9 @@ private:
     }
     void Stop()
     {
-        if (_taskState == TaskState_Running)
+        if (_taskState == TaskState_Running
+                || _taskState == TaskState_Ready
+                || _taskState == TaskState_Suspended)
         {
             OnStop();
             _taskState = TaskState_Stopping;

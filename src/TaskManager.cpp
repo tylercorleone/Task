@@ -57,49 +57,9 @@ void TaskManager::Setup()
 
 void TaskManager::StartTask(Task* pTask)
 {
-    if (pTask->_taskState != TaskState_Running)
-    {
-        // check if it has been stopped yet as it may be just stopping
-        if (pTask->_taskState == TaskState_Stopped)
-        {
-            // append to the list
-            if (_pFirstTask == NULL)
-            {
-                _pFirstTask = pTask;
-                _pLastTask = pTask;
-            }
-            else
-            {
-                _pLastTask->_pNext = pTask;
-                _pLastTask = pTask;
-            }
-        }
-        pTask->Start();
-    }
-}
-
-void TaskManager::StopTask(Task* pTask)
-{
-    pTask->Stop();
-}
-
-void TaskManager::SuspendTask(Task* pTask)
-{
-    pTask->Suspend();
-}
-
-void TaskManager::ResumeTask(Task* pTask)
-{
-    pTask->Resume();
-}
-
-void TaskManager::RegisterTask(Task* pTask)
-{
     if (pTask->_taskState == TaskState_Running
-            || pTask->_taskState == TaskState_Ready
-            || pTask->_taskState == TaskState_Suspended)
+            || pTask->_taskState == TaskState_Ready)
     {
-        // already registered
         return;
     }
 
@@ -118,7 +78,48 @@ void TaskManager::RegisterTask(Task* pTask)
             _pLastTask = pTask;
         }
     }
-    pTask->_taskState = TaskState_Suspended;
+    pTask->Start();
+}
+
+void TaskManager::StopTask(Task* pTask)
+{
+    pTask->Stop();
+}
+
+void TaskManager::SuspendTask(Task* pTask)
+{
+    if (pTask->_taskState == TaskState_Suspended)
+    {
+        return;
+    }
+
+    // check if it has been stopped yet as it may be just stopping
+    if (pTask->_taskState == TaskState_Stopped)
+    {
+        pTask->_remainingTime = pTask->_timeInterval;
+        pTask->_dirtyRemainingTime = false;
+        pTask->_updateTimeReached = false;
+        pTask->_taskState = TaskState_Ready;
+
+        // append to the list
+        if (_pFirstTask == NULL)
+        {
+            _pFirstTask = pTask;
+            _pLastTask = pTask;
+        }
+        else
+        {
+            _pLastTask->_pNext = pTask;
+            _pLastTask = pTask;
+        }
+    }
+    pTask->Suspend();
+}
+
+
+void TaskManager::ResumeTask(Task* pTask)
+{
+    pTask->Resume();
 }
 
 TaskState TaskManager::StatusTask(Task* pTask)
@@ -130,11 +131,13 @@ void TaskManager::Loop(uint16_t watchdogTimeOutFlag)
 {
     uint32_t currentTick = GetTaskTime();
     uint32_t deltaTime = currentTick - _lastTick;
+    _taskListScanned = false;
 
     if (deltaTime >= TaskTimeAccuracy)
     {
         _lastTick = currentTick; // update before calling process
         uint32_t nextWakeTime = ProcessTasks(deltaTime);
+        _taskListScanned = true;
 
         // if the next task has more time available than the next
         // millisecond interupt, then sleep
@@ -188,12 +191,6 @@ void TaskManager::Loop(uint16_t watchdogTimeOutFlag)
 #endif
         }
 #endif
-
-        _taskListScanned = true;
-    }
-    else
-    {
-        _taskListScanned = false;
     }
 }
 
@@ -284,8 +281,10 @@ uint32_t TaskManager::ProcessTasks(uint32_t deltaTime)
                 uint32_t taskDeltaTime = pIterate->_timeInterval - pIterate->_remainingTime;
                 taskDeltaTime += deltaTime;
 
+                pIterate->_updateTimeReached = true;
+                pIterate->_dirtyRemainingTime = true;
+
                 pIterate->OnUpdate(taskDeltaTime);
-                pIterate->_updateTimeReachedFlag = true;
             }
         }
 
@@ -318,27 +317,21 @@ uint32_t TaskManager::UpdateTasksList(uint32_t deltaTime)
             {
                 ++_runningTasksCount;
 
-                if (pIterate->_dirtyRemainingTimeFlag) {
+                if (pIterate->_dirtyRemainingTime)
+                {
                     UpdateTaskRemainingTime(pIterate, deltaTime);
-                } else {
-                    // let's all Running tasks have a "dirtyRemainingTime" before the next iteration
-                    pIterate->_dirtyRemainingTimeFlag = true;
                 }
-
-                pIterate->_updateTimeReachedFlag = false;
+                // let's all Running tasks have a dirtyRemainingTime (value)
+                // before the next iteration
+                pIterate->_dirtyRemainingTime = true;
+                pIterate->_updateTimeReached = false;
 
                 if (pIterate->_remainingTime < nextWakeTime)
                 {
                     nextWakeTime = pIterate->_remainingTime;
                 }
             }
-            else if (pIterate->_taskState == TaskState_Ready)
-            {
-                pIterate->_taskState = TaskState_Running;
-                ++_runningTasksCount;
-            }
         }
-
         pIterate = pNext; // iterate to the next
     }
 
@@ -374,7 +367,7 @@ void TaskManager::RemoveTask(Task* pTaskToRemove, Task* pPrevious, Task* pNext)
 
 uint32_t TaskManager::UpdateTaskRemainingTime(Task* pTask, uint32_t deltaTime)
 {
-    if (pTask->_updateTimeReachedFlag)
+    if (pTask->_updateTimeReached)
     {
         // add the initial time so we don't loose any remainders
         pTask->_remainingTime += pTask->_timeInterval;

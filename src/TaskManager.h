@@ -35,7 +35,6 @@ public:
     void StopTask(Task* pTask);
     void SuspendTask(Task* pTask);
     void ResumeTask(Task* pTask);
-    void RegisterTask(Task* pTask);
     TaskState StatusTask(Task* pTask);
     void ResetTask(Task* pTask)
     {

@@ -104,7 +104,8 @@ inline Procedure::~Procedure()
 {
     ProcedureNode *pIterate;
     pIterate = pFirstNode;
-    while (pIterate != nullptr) {
+    while (pIterate != nullptr)
+    {
         ProcedureNode *pNext = pIterate->pNext;
         delete pIterate;
         pIterate = pNext;
@@ -117,10 +118,10 @@ inline Procedure::Procedure(ProcedureNode *pTaskNode) :
     pFirstNode = pLastNode = pTaskNode;
 }
 
-inline bool Procedure::OnStart() {
-    sequenceCompleted = false;
+inline bool Procedure::OnStart()
+{
     pNodeToRun = pFirstNode;
-    _remainingTime = 0;
+    setRemainingTime(0);
     return true;
 }
 
@@ -128,7 +129,7 @@ inline void Procedure::OnUpdate(uint32_t taskDeltaTime)
 {
     if (sequenceCompleted && !repeat)
     {
-        setTimeInterval(-1);
+        Suspend();
         return;
     }
 
@@ -152,7 +153,7 @@ inline void Procedure::OnUpdate(uint32_t taskDeltaTime)
         else
         {
             sequenceCompleted = true;
-            setTimeInterval(-1);
+            Suspend();
         }
     }
 }

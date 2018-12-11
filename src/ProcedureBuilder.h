@@ -43,15 +43,15 @@ public:
     static ProcedureBuilder begin(void (*callback)(), uint32_t nextInterval);
     static ProcedureBuilder begin(uint32_t (*callbackReturningInterval)());
     template<typename T> static ProcedureBuilder begin(
-            void (*callbackWithState)(T*), uint32_t nextInterval, T *state);
+            void (*callbackWithState)(T*), T *state, uint32_t nextInterval);
     template<typename T>
     static ProcedureBuilder begin(
             uint32_t (*callbackReturningIntervalWithState)(T*), T *state);
     ProcedureBuilder& then(void (*callback)(), uint32_t nextInterval);
     ProcedureBuilder& then(uint32_t (*callbackReturningInterval)());
     template<typename T>
-    ProcedureBuilder& then(void (*callbackWithState)(T*), uint32_t nextInterval,
-            T *state);
+    ProcedureBuilder& then(void (*callbackWithState)(T*), T *state,
+            uint32_t nextInterval);
     template<typename T>
     ProcedureBuilder& then(uint32_t (*callbackReturningIntervalWithState)(T*),
             T *state);
@@ -91,7 +91,7 @@ inline ProcedureBuilder ProcedureBuilder::begin(
 
 template<typename T>
 inline ProcedureBuilder ProcedureBuilder::begin(void (*callbackWithState)(T*),
-        uint32_t nextInterval, T *state)
+        T *state, uint32_t nextInterval)
 {
 
     ProcedureNode *pTaskNode = new CallbackWithState(
@@ -136,7 +136,7 @@ inline ProcedureBuilder& ProcedureBuilder::then(
 
 template<typename T>
 inline ProcedureBuilder& ProcedureBuilder::then(void (*callbackWithState)(T*),
-        uint32_t nextInterval, T *state)
+        T *state, uint32_t nextInterval)
 {
 
     instance.pLastNode->pNext = new CallbackWithState(
