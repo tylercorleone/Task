@@ -59,10 +59,10 @@ public:
     Task(uint32_t timeInterval) :
             _remainingTime(0),
             _timeInterval(timeInterval),
-            _dirtyRemainingTime(false),
             _pNext(NULL),
             _taskState(TaskState_Stopped),
-            _updateTimeReached(false)
+            _updateTimeReached(false),
+            _dirtyRemainingTime(false)
     {
 
     }
