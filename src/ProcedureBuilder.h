@@ -71,7 +71,6 @@ inline ProcedureBuilder::ProcedureBuilder(Procedure &instance) :
 inline ProcedureBuilder ProcedureBuilder::begin(void (*callback)(),
         uint32_t nextInterval)
 {
-
     ProcedureNode *pTaskNode = new Callback(callback, nextInterval);
     Procedure *pInstance = new Procedure(pTaskNode);
     ProcedureBuilder builder { *pInstance };

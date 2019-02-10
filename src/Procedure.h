@@ -121,6 +121,7 @@ inline Procedure::Procedure(ProcedureNode *pTaskNode) :
 inline bool Procedure::OnStart()
 {
     pNodeToRun = pFirstNode;
+    sequenceCompleted = false;
     setRemainingTime(0);
     return true;
 }
