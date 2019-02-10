@@ -21,7 +21,7 @@
  * uint32_t makeSomethingReturnIntervalUsingState(SomeType state);
  *
  * Procedure &procedure = ProcedureBuilder::begin(makeSomething, MsToTaskTime(1000))     // (1)
- *        .then(makeSomethingUsingState, MsToTaskTime(2000), stateHolder)                // (2)
+ *        .then(makeSomethingUsingState, stateHolder, MsToTaskTime(2000))                // (2)
  *        .then(makeSomethingReturnInterval)                                             // (3)
  *        .then(makeSomethingReturnIntervalUsingState, stateHolder)                      // (4)
  *        .thenRepeat();                                                                 // (5)
