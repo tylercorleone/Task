@@ -33,6 +33,8 @@ public:
     void Loop(uint16_t watchdogTimeOutFlag = WDTO_500MS);
     void StartTask(Task* pTask);
     void StopTask(Task* pTask);
+    void SuspendTask(Task* pTask);
+    void ResumeTask(Task* pTask);
     TaskState StatusTask(Task* pTask);
     void ResetTask(Task* pTask)
     {
@@ -59,13 +61,22 @@ public:
         return _lastTick;
     }
 
+    bool IsIdle()
+    {
+        return _taskListScanned && _runningTasksCount == 0;
+    }
+
 private:
     friend class Task;
 
     uint32_t _lastTick;
     Task* _pFirstTask;
     Task* _pLastTask;
+    bool _taskListScanned;
+    uint16_t _runningTasksCount;
 
     uint32_t ProcessTasks(uint32_t deltaTime);
-    void RemoveStoppedTasks();
+    uint32_t UpdateTasksList(uint32_t deltaTime);
+    void RemoveTask(Task* pTaskToRemove, Task* pPrevious, Task* pNext);
+    uint32_t UpdateTaskRemainingTime(Task* pTask, uint32_t deltaTime);
 };
