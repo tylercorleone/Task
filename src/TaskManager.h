@@ -63,7 +63,7 @@ public:
 
     bool IsIdle()
     {
-        return _taskListScanned && _runningTasksCount == 0;
+        return _tasksProcessingCompleted && _runningTasksCount == 0;
     }
 
 private:
@@ -72,7 +72,7 @@ private:
     uint32_t _lastTick;
     Task* _pFirstTask;
     Task* _pLastTask;
-    bool _taskListScanned;
+    bool _tasksProcessingCompleted;
     uint16_t _runningTasksCount;
 
     uint32_t ProcessTasks(uint32_t deltaTime);

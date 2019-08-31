@@ -33,7 +33,7 @@ extern "C"
 TaskManager::TaskManager() :
         _pFirstTask( NULL ),
         _pLastTask( NULL ),
-        _taskListScanned(false),
+        _tasksProcessingCompleted(false),
         _runningTasksCount(0)
 {
 
@@ -131,13 +131,13 @@ void TaskManager::Loop(uint16_t watchdogTimeOutFlag)
 {
     uint32_t currentTick = GetTaskTime();
     uint32_t deltaTime = currentTick - _lastTick;
-    _taskListScanned = false;
+    _tasksProcessingCompleted = false;
 
     if (deltaTime >= TaskTimeAccuracy)
     {
         _lastTick = currentTick; // update before calling process
         uint32_t nextWakeTime = ProcessTasks(deltaTime);
-        _taskListScanned = true;
+        _tasksProcessingCompleted = true;
 
         // if the next task has more time available than the next
         // millisecond interupt, then sleep
